@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 import numpy as np
 
-def plot_lim(f, a, delta, x_min=None, x_max=None, y_min=None, y_max=None):
+def plot_limit(f, a, delta, epsilon, x_min=None, x_max=None, y_min=None, y_max=None):
     if x_min is None:
         if x_max is not None:
             x_min = a - np.abs(a - x_max)
@@ -17,15 +18,18 @@ def plot_lim(f, a, delta, x_min=None, x_max=None, y_min=None, y_max=None):
     x = np.linspace(x_min, x_max, 200)
     y = f(x)
 
+    f_y_min = np.min(y)
+    f_y_max = np.max(y)
+    f_y_amp = np.abs(f_y_min - f_y_max)
+
     if y_min is None:
-        y_min = np.min(y)
+        y_min = (f_y_min + f_y_max)/2 - f_y_amp
     if y_max is None:
-        y_max = np.max(y)
+        y_max = (f_y_min + f_y_max)/2 + f_y_amp
 
     fig, ax = plt.subplots()
 
     ax.grid(visible=True, color='#DDDDDD', linestyle='--')
-    ax.legend()
 
     ax.spines.top.set_visible(False)
     ax.spines.right.set_visible(False)
@@ -49,14 +53,18 @@ def plot_lim(f, a, delta, x_min=None, x_max=None, y_min=None, y_max=None):
     ax.annotate("", xytext=(a+delta+arrow_len, y_min - x_arrow_margin), xy=(a+delta, y_min - x_arrow_margin), arrowprops=dict(arrowstyle="->"))
 
     _l_delta = 0.00001 # to compute limits, not the one specified by the user
-    left_limit = f(np.array([a-_l_delta]))[0]
-    right_limit = f(np.array([a+_l_delta]))[0]
+    L, left_limit, right_limit = limit(f, a)
+    print(L, left_limit, right_limit)
 
     axis_ratio = x_amp/y_amp
 
     # compute left and right derivatives
-    dy_dx_left = (f(a-delta) - f(a-delta+-_l_delta))/(_l_delta)
-    dy_dx_right = (f(a+delta) - f(a+delta+_l_delta))/(-_l_delta)
+    _, dy_dx_left, _ = derivative(f, a-delta)
+    _, _, dy_dx_right = derivative(f, a+delta)
+    dy_dx, _, _ = derivative(f, a)
+    print(dy_dx, dy_dx_left, dy_dx_right)
+    #dy_dx_left = (f(a-delta) - f(a-delta+-_l_delta))/(_l_delta)
+    #dy_dx_right = (f(a+delta) - f(a+delta+_l_delta))/(-_l_delta)
 
     left_angle = np.atan(dy_dx_left) + np.pi
 
@@ -78,15 +86,81 @@ def plot_lim(f, a, delta, x_min=None, x_max=None, y_min=None, y_max=None):
     ax.annotate("", xytext=(a-delta+left_dx, f(a-delta)+left_dy), xy=(a-delta, f(a-delta)), arrowprops=arrowprops)
     ax.annotate("", xytext=(a+delta+right_dx, f(a+delta)+right_dy), xy=(a+delta, f(a+delta)), arrowprops=arrowprops)
 
-    ax.scatter(x=a-_l_delta, y=left_limit, color="#EE6666")
-    ax.scatter(x=a-_l_delta, y=right_limit, color="#EE6666")
+    x_pm_delta = x[(x >= a-delta) & (x <= a+delta)]
+    f_x_pm_delta = f(x_pm_delta)
+
+    vertices_under = [[x_pm_delta[0], y_min-y_margin]]
+    vertices_under.extend(list(a) for a  in zip(x_pm_delta, f(x_pm_delta)))
+    vertices_under.append([x_pm_delta[-1], y_min-y_margin])
+    vertices_under.append([x_pm_delta[0], y_min-y_margin])
+
+    for x1, x2 in zip(x_pm_delta, x_pm_delta[1:]):
+        y1, y2 = f(np.array([x1]))[0], f(np.array([x2]))[0]
+        x1, y1, x2, y2 = (x1, y1, x2, y2) if y1 < y2 else (x2, y2, x1, y1)
+
+        vertices = [[x_min, y1], [x1, y1], [x2, y2], [x_min, y2], [x_min, y1]]
+
+        ax.add_patch(Polygon(vertices, closed=True, facecolor='lightblue', edgecolor='lightblue', alpha=1.0))
+
+    polygon_under = Polygon(vertices_under, closed=True, facecolor='lightblue', edgecolor='lightblue', alpha=1.0)
+    ax.add_patch(polygon_under)
+
+    # L +- epsilon
+    epsilon_left_vertices = [[x_min, left_limit-epsilon], [x_max, left_limit-epsilon],
+                             [x_max, left_limit+epsilon], [x_min, left_limit+epsilon], 
+                             [x_min, left_limit-epsilon]]
+    polygon_epsilon_left = Polygon(epsilon_left_vertices, closed=True, facecolor='#FF3355', edgecolor='#FF3355', alpha=0.1)
+    ax.add_patch(polygon_epsilon_left)
+
+    epsilon_right_vertices = [[x_min, right_limit-epsilon], [x_max, right_limit-epsilon],
+                             [x_max, right_limit+epsilon], [x_min, right_limit+epsilon], 
+                             [x_min, right_limit-epsilon]]
+    polygon_epsilon_right = Polygon(epsilon_right_vertices, closed=True, facecolor='#FF3355', edgecolor='#FF3355', alpha=0.1)
+    ax.add_patch(polygon_epsilon_right)
+
+    ax.scatter(x=a, y=left_limit, color="#EE6666")
+    ax.scatter(x=a, y=right_limit, color="#EE6666")
 
     plt.show(block=True)
 
+def limit(f, x, max_iters=20, presicion=1e-6):
+    delta = 0.01
 
-def x_square(x):
-    return x*x
+    prev_left_value = f(np.array([x - delta]))[0]
+    left_value = prev_left_value
+    for _ in range(max_iters):
+        delta *= 0.1
+        left_value = f(np.array([x - delta]))[0]
+        print(f'left: deta: {delta}, prev: {prev_left_value}, curr: {left_value}')
 
+        if np.abs(left_value - prev_left_value) < presicion:
+            break
+
+        prev_left_value = left_value
+
+    delta = 0.01
+    prev_right_value = f(np.array([x + delta]))[0]
+    right_value = prev_right_value
+    for _ in range(max_iters):
+        delta *= 0.1
+        right_value = f(np.array([x + delta]))[0]
+        print(f'right: deta: {delta}, prev: {prev_right_value}, curr: {right_value}')
+
+        if np.abs(right_value - prev_right_value) < presicion:
+            break
+
+        prev_right_value = right_value
+
+    result = left_value if np.abs(left_value - right_value) < presicion*10 else None
+
+    return result, left_value, right_value
+
+def derivative(f, x, max_iters=20, presicion=1e-12):
+    return limit(lambda t: (f(x+t) - f(x-t))/(2*t), 0, max_iters, presicion)
 
 if __name__ == '__main__':
-    plot_lim(x_square, a=2, delta=0.1, x_min=0, x_max=4)
+
+    plot_limit(lambda x: -(x-1)**2 + 4, a=1, delta=0.1, epsilon=0.01)
+    plot_limit(lambda x: x*x, a=1, delta=0.1, epsilon=0.01)
+    plot_limit(np.sign, a=0, delta=0.1, epsilon=0.01)
+    plot_limit(lambda x: x**3-2*x**2-x+2, a=0, delta=0.05, epsilon=0.01)
