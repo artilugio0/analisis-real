@@ -24,7 +24,10 @@ def get_curve_color():
     _curve_color_index = (_curve_color_index + 1) % len(colors)
     return colors[_curve_color_index]
 
-def plot_limit(f, a, delta, epsilon, x_min=None, x_max=None, y_min=None, y_max=None, ax=None, color=get_curve_color()):
+def plot_limit(f, a, delta, epsilon, x_min=None, x_max=None, y_min=None, y_max=None, ax=None, color=None):
+    if color is None:
+        color = get_curve_color()
+
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -229,9 +232,7 @@ if __name__ == '__main__':
     plot_limit(f3, a=a, delta=delta, epsilon=epsilon, ax=axs[1, 0])
     plot_limit(f4, a=a, delta=delta, epsilon=epsilon, ax=axs[1, 1])
 
-    fig, ax = plt.subplots()
-    plot_limit_slider(f1, a=a, delta=delta, epsilon=epsilon, ax=ax)
+    #fig, ax = plt.subplots()
+    #plot_limit_slider(f1, a=a, delta=delta, epsilon=epsilon, ax=ax)
 
     plt.show(block=True)
-
-    print(delta, epsilon)
