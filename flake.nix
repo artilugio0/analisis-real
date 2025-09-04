@@ -15,6 +15,7 @@
         packages = with pkgs; [
           python3
           python313Packages.matplotlib
+          python313Packages.jupyter
         ];
       };
     };
