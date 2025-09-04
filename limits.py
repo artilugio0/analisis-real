@@ -55,6 +55,10 @@ def plot_limit(f, a, delta, epsilon, x_min=None, x_max=None, y_min=None, y_max=N
     if y_max is None:
         y_max = (f_y_min + f_y_max)/2 + f_y_amp
 
+    if y_max == y_min:
+        y_min -= 1
+        y_max += 1
+
     ax.grid(visible=True, color='#DDDDDD', linestyle='--')
 
     ax.spines.top.set_visible(False)
@@ -106,8 +110,10 @@ def plot_limit(f, a, delta, epsilon, x_min=None, x_max=None, y_min=None, y_max=N
     arrowprops = dict(arrowstyle='->', color='#FF3322', linewidth=2)
 
     # arrows on the curve
-    ax.annotate("", xytext=(a-delta+left_dx, f(a-delta)+left_dy), xy=(a-delta, f(a-delta)), arrowprops=arrowprops)
-    ax.annotate("", xytext=(a+delta+right_dx, f(a+delta)+right_dy), xy=(a+delta, f(a+delta)), arrowprops=arrowprops)
+    f_a_min_delta = f(np.array([a-delta]))[0]
+    f_a_plus_delta = f(np.array([a+delta]))[0]
+    ax.annotate("", xytext=(a-delta+left_dx, f_a_min_delta+left_dy), xy=(a-delta, f_a_min_delta), arrowprops=arrowprops)
+    ax.annotate("", xytext=(a+delta+right_dx, f_a_plus_delta+right_dy), xy=(a+delta, f_a_plus_delta), arrowprops=arrowprops)
 
     x_pm_delta = x[(x >= a-delta) & (x <= a+delta)]
     f_x_pm_delta = f(x_pm_delta)
@@ -223,8 +229,10 @@ if __name__ == '__main__':
     f2 = lambda x: x*x
     f3 = lambda x: x**3-2*x**2-x+2
     f4 = np.sign
+    def f5(x):
+        return np.ones(x.shape[0])
 
-    f = f4
+    f = f3
 
     fig, axs = plt.subplots(2, 2)
     plot_limit(f1, a=a, delta=delta, epsilon=epsilon, ax=axs[0, 0])
@@ -232,7 +240,9 @@ if __name__ == '__main__':
     plot_limit(f3, a=a, delta=delta, epsilon=epsilon, ax=axs[1, 0])
     plot_limit(f4, a=a, delta=delta, epsilon=epsilon, ax=axs[1, 1])
 
-    #fig, ax = plt.subplots()
-    #plot_limit_slider(f1, a=a, delta=delta, epsilon=epsilon, ax=ax)
+    '''
+    fig, ax = plt.subplots()
+    plot_limit_slider(f, a=a, delta=delta, epsilon=epsilon, ax=ax)
+    '''
 
     plt.show(block=True)
